@@ -128,7 +128,41 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact])
         ####################################################
         # Student code goes here
-        
+
+        if factq(fact.name) and fact in self.facts :
+            if len(fact.supports_facts) > 0:
+                i = 0
+                factsupp = fact.supports_facts
+                currlengthi = len(factsupp)
+                while i < currlengthi:
+                    if factsupp[i].asserted or factsupp[i].supported:
+                        i = i + 1
+                    else:
+                        kb_retract(factsupp[i])
+                        currlengthi = currlengthi - 1
+
+            if len(fact.supports_rules) > 0:
+                j = 0
+                rulesupp = fact.supports_rules
+                currlengthj = len(rulesupp)
+                while j < currlengthj:
+                    if not rulesupp[j].asserted and not rulesupp[j].supported:
+                        kb_retract(rulesupp[j])
+                        currlengthj = currlengthj - 1
+                    else:
+                        j = j + 1
+
+            if fact.supported:       
+                k = 0
+                currlengthk = len(fact.supported_by)
+                while k < currlengthk: 
+                    (fact.supported_by[k]).support_facts.remove(fact)
+                    currlengthk = currlengthk - 1
+
+            if fact.asserted or len(fact.supported_by) > 1:
+                fact.asserted = False
+            else:
+                self.facts.remove(fact)
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -146,3 +180,34 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+
+        if len(rule.lhs) < 1 or not rule.rhs:
+            return
+
+        if fact not in kb.facts:
+            return
+
+        blist = match(rule.lhs[0], fact.statement)
+        if blist != False:
+            fr = instantiate(rule.rhs, blist)
+            if len(rule.lhs) == 1:
+                newf = Fact(fr)
+                kb.kb_assert(newf)
+                kb.kb_add(newf)
+                newf.supported_by.append(fact)
+                newf.supported_by.append(rule)
+                fact.supports_facts.append(newf)
+                rule.supports_facts.append(newf)
+            else: 
+                i = 1
+                updatedleft = []
+                while i < (len(rule.lhs) - 1):
+                    updatedleft.append(instantiate(rule.lhs[i], blist))
+                newr = Rule([updatedleft, fr])
+                print(newr)
+                kb.kb_assert(newr)
+                kb.kb_add(newr)
+                newr.supported_by.append(fact)
+                newr.supported_by.append(rule)
+                fact.supports_rules.append(newr)
+                rule.supports_rules.append(newr)
